@@ -8,16 +8,18 @@ for(i=1:p)
    x(:,i)=x(:,i)-mean(x(:,i));
    x(:,i)=x(:,i).*(sqrt(n)/sqrt(x(:,i)'*x(:,i)));
 end
+%True Model (b-regression coefficients)
 b=zeros(p,1);
 b(1)=1;
 b(2)=2;
 b(3)=3;
 b(4)=4;
 b(5)=5;
+%Inject some noise
 phi=1;
 y=x*b+sqrt(1/phi)*randn(n,1);
+%Subtract Mean (because integrating out intercept over uniform prior)
 y=y-mean(y);
-
 
 %ols for reference
 Bols=linsolve(x'*x,x'*y);
@@ -31,27 +33,34 @@ lam=ones(p,1); %Penalty coming from prior on regression coefficients
 Lam=diag(lam);
 xx=x'*x;
 
+%Calculate (log)Density of Null Model (all up to proportionality constant)
 gamma=zeros(p,1);
 logdensity=ones(p,1)*sum(gamma.*logpriorodds);
 logdensityold=logdensity;
-sort_improv=ones(p,1);
 
+%Begin Greedy Algorithm
+sort_improv=ones(p,1);
 fprintf('Order of egressors Added\n');
-while sort_improv(1)>0 
+while sort_improv(1)>0 %While still improving the log posterior density
     
 for i=1:p
-   gamma_prop=gamma;
-   gamma_prop(i)=1;
-   inc_indices=find(gamma_prop);
-   Lamg=Lam(inc_indices,inc_indices);
+   gamma_prop=gamma; %Gamma is binary vector for inclusion/exclusion
+   gamma_prop(i)=1; %Proposed gamma
+   inc_indices=find(gamma_prop); %Included Indices
+   
+   %Construct sub-matrices
+   Lamg=Lam(inc_indices,inc_indices); 
    xxg=xx(inc_indices,inc_indices);
    xg=x(:,inc_indices);
-   B=linsolve(xxg+Lamg,xg'*y);
-   logdensity(i)=0.5*log(det(Lamg))-0.5*log(det(Lamg+xxg))+0.5*phi*(B'*xg'*y)+sum(gamma_prop.*logpriorodds);
+   
+   Bg=linsolve(xxg+Lamg,xg'*y);
+   logdensity(i)=0.5*log(det(Lamg))-0.5*log(det(Lamg+xxg))+0.5*phi*(Bg'*xg'*y)+sum(gamma_prop.*logpriorodds);
 end
 
+%Which Predictor gives greatest improvement
 [sort_improv,sort_indices]=sort(logdensity-logdensityold,'descend');
 
+%If improvement is positive, accept predictor and echo added predictor index
 if(sort_improv(1)>0) 
     gamma(sort_indices(1))=1;
     disp(sort_indices(1));
@@ -59,5 +68,7 @@ end
 
 logdensityold=ones(p,1)*logdensity(sort_indices(1));
 end
+
+%Report Chosen Model
 fprintf('Model Selected\n')
 disp(find(gamma));
