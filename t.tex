@@ -1,0 +1,83 @@
+\documentclass[6pt]{article}
+\usepackage[portrait, a4paper, left=.2in, top=0.9in, right=.2in, bottom=0.70in,nohead,includefoot, verbose, ignoremp]{geometry}
+\usepackage{charter} %choose default font ... your choice here % {mathptmx} % mathrsfs} % mathptmx} %mathpple} %mathpazo}
+\usepackage{enumerate} % for different labels in numbered lists 
+\usepackage{latexsym,amssymb,amsmath,amsfonts,graphicx,color,fancyvrb,amsthm,enumerate,natbib}
+\usepackage[pdftex,pagebackref=true]{hyperref}
+\usepackage[svgnames,dvipsnames,x11names]{xcolor}
+\usepackage{float}
+\usepackage{pdfpages}
+\hypersetup{
+	colorlinks,%
+	linkcolor=RoyalBlue2,  % colour of links to eqns, tables, sections, etc
+	urlcolor=Sienna4,   % colour of unboxed URLs
+	citecolor=RoyalBlue2  % colour of citations linked in text
+}
+\pagestyle{empty} % no page number on front page
+%\renewcommand{\includegraphics}{}  % use this to suppress inclusion of figs for proofing
+
+% custom definitions ...
+\DeclareMathOperator*{\argmax}{arg\,max}
+\def\eq#1{equation (\ref{#1})}
+\def\pdf{p.d.f.\ } \def\cdf{c.d.f.\ }
+\def\pdfs{p.d.f.s} \def\cdfs{c.d.f.s}
+\def\mgf{m.g.f.\ } \def\mgfs{m.g.f.s\ }
+\def\ci{\perp\!\!\!\perp}                        % conditional independence symbol
+\def\beginmat{ \left( \begin{array} }
+		\def\endmat{ \end{array} \right) }
+\def\diag{{\rm diag}}
+\def\log{{\rm log \,}}
+\def\tr{{\rm tr}}
+\def\max{{\rm max}}
+\def\const{{\rm const}}
+\def\cor{{\rm cor}}
+\def\KL{{\rm KL}}
+
+%
+
+%% Document starts here ...
+%%
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+\begin{document}
+\bibliographystyle{nature}
+\vspace{-1in}
+\title{\bf Greedy Cauchy Prior EM}
+\maketitle \centerline{{\color{RoyalBlue2}{Michael Lindon}}}\bigskip
+Consider the statistical model
+\begin{align*}
+	Y|\beta,\phi &\sim N(1\beta_{0}+X\beta,\phi^{-1})\\
+	\beta_{i}|\phi, \gamma_{i},\lambda_{i}&\sim N\left( 0,\phi^{-1}\frac{\lambda_{i}}{\gamma_{i}}\right)\\
+	\lambda_{i}&\sim Ga\left( \frac{\alpha}{2},\frac{\alpha}{2} \right)\\
+	p(\gamma)&=\prod_{i=1}^{p}p^{\gamma_{i}}(1-p)^{1-\gamma_{i}}\\
+	p(\beta_{0},\phi)&\propto \frac{1}{\phi}.
+\end{align*}
+This exploits the scale-mixture representation of a student's t distribution. In particular for $\alpha=1$ this equates to a prior on the regression coefficients that is a mixture of a point mass at zero with prior probability $1-p$ and a Cauchy centered at zero with prior probability $p$. By allowing the $\lambda_{i}$ to vary we get selective shrinkage of the coefficients and the stats people like the heavy tailed priors so that large coefficients are minimally shrunk toward zero. Cauchy has some very good properties. There are lots of exotic priors but the EM for Cauchy is nice.\\
+\\
+We seek to find the mode of $p(\beta,\gamma,\phi|Y)$. \\
+In an EM framework we can treat the $\lambda_{i}$'s as missing data, so we can minorize by computing $\mathbb{E}_{\lambda}[p(\beta,\gamma,\phi|Y,\lambda)|\beta^{(t)},\gamma^{(t)},\phi^{(t)}]$ and then maximize along $\phi$ and then along $(\beta,\gamma)$.
+
+\section{Expectation}
+$p(\lambda_{i}|\beta_{i},\gamma_{i},\phi)\propto p(\beta_{i}|\lambda_{i},\gamma_{i},\phi)p(\lambda_{i})$ so the distribution of our ``missing data'' $\lambda_{i}|\beta_{i},\gamma_{i},\phi \sim Ga\left( \frac{1}{2}(\alpha+\gamma_{i}),\frac{1}{2}(\alpha+\phi\gamma_{i}\beta_{i}^{2}) \right)$, which has expectation $\mathbb{E}[\lambda_{i}]=(\alpha+\gamma_{i})/(\alpha+\phi\gamma_{i}\beta_{i}^{2})$. So our objective function is
+\begin{align*}
+	Q(\beta,\gamma,\phi||\beta^{(t)},\gamma^{(t)},\phi^{(t)})=\mathbb{E}\left[ p(\beta,\gamma,\phi|Y,\lambda) \right]\propto \frac{n-3}{2}\log \phi -\frac{\phi}{2}||Y-X\beta||^{2}+\mathbb{E}\left[ \sum \log p(\beta_{i}|\gamma_{i},\lambda_{i},\phi) \right] + \sum \log p(\gamma_{i}),
+\end{align*}
+where Y now refers to the centered data (the $-3$ comes from the prior and also the normalizing constant when we integrate out the incercept). When $\gamma_{i}=0$ $p(\beta_{i}|\gamma_{i},\lambda_{i},\phi)$ is degenerate and does not have a density. I still haven't found a satisfying notation yet, you just have to consider the different cases and avoid writing down a density in the non full rank degenerate case (which is annoying as the dimension changes).
+
+\section{Maximization}
+For $\phi$ given $(\beta,\gamma)^{(t)}$\\
+\begin{align*}
+	\phi^{t+1}=\frac{n+\sum\gamma^{(t)}-3}{||Y-X\beta^{(t)}||+\sum \gamma_{i}^{(t)}\mathbb{E}\left[ \lambda_{i} \right]\beta_{i}^{(t)2}}
+\end{align*}
+For $(\beta,\gamma)$ given $\phi^{(t+1)}$ note if $\gamma_{i}=0$ then $\beta_{i}=0$. For the non-zero $\gamma$ lets construct submatrices and subvectors indexed by $\gamma$, then 
+\begin{align*}
+	Q(\beta,\gamma,\phi^{(t+1)}||\beta^{(t)},\gamma^{(t)},\phi^{(t)})\propto \frac{n+\sum \gamma_{i}-3}{2}\log \phi -\frac{\phi^{t+1}}{2}||Y-X_{\gamma}\beta_{\gamma}||^{2}-\frac{\phi^{(t+1)}}{2}\beta^{T}\Lambda_{\gamma}^{(t)}\beta + \sum \log p(\gamma_{i})\\
+	Q(\beta,\gamma,\phi^{(t+1)}||\beta^{(t)},\gamma^{(t)},\phi^{(t)})\propto \frac{n+\sum \gamma_{i}-3}{2}\log \phi -\frac{\phi^{t+1}}{2}||\beta_{\gamma}-(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})^{-1}X_{\gamma}^{T}Y||_{(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})}\\-\frac{\phi^{(t+1)}}{2}Y^{T}(I-X_{\gamma}(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})^{-1}X_{\gamma}^{T})Y + \sum \log p(\gamma_{i}),
+\end{align*}
+which is achieves a maximum for a given $\gamma$ of
+\begin{align*}
+	\sup_{\beta}	Q(\beta,\gamma,\phi^{(t+1)}||\beta^{(t)},\gamma^{(t)},\phi^{(t)})\propto \frac{n+\sum \gamma_{i}-3}{2}\log \phi -\frac{\phi^{(t+1)}}{2}Y^{T}(I-X_{\gamma}(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})^{-1}X_{\gamma}^{T})Y + \sum \log p(\gamma_{i}),
+\end{align*}
+Basically do the greedy bit for the $\gamma$ vector during which maximize with respect to $\beta$ for the current $\gamma$
+\end{document}
