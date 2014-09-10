@@ -45,10 +45,20 @@
 \vspace{-1in}
 \title{\bf Greedy Cauchy Prior EM}
 \maketitle \centerline{{\color{RoyalBlue2}{Michael Lindon}}}\bigskip
+\section{Previously\dots}
+When we spoke we were interested in finding the posterior mode of the model space $p(\gamma|Y)$, which we were going to get at by doing EM on $p(\gamma|Y,\phi)$ which had the form 
+\begin{align*}
+	p(\gamma|Y,\phi)\propto \left( \frac{|\Lambda_{\gamma}|}{|\Lambda_{\gamma}+X^{T}X|}\right)^{\frac{1}{2}}e^{\frac{\phi}{2}Y^{T}X(X^{T}X+\Lambda_{\gamma})^{-1}X^{T}Y}p(\gamma),
+\end{align*}
+which comes from $\propto p(Y|\phi,\gamma) p(\gamma)$, where $p(Y|\phi,\gamma)=\int p(Y|\beta,\phi)p(\beta|\phi,\gamma)d\beta$ where we assumed a normal prior with a fixed diagonal covariance matrix on the regression coefficients $\beta$ which corresponds to a ridge regression type problem with fixed ridge penalty. The unknown parameter $\phi$ was filled in by EM at each iteration. This is a good thing to start with, but it wouldn't excite any statisticians because people prefer more exotic priors on the regression coefficients that have some good selective shrinkage properties. Most of these have some representation as a scale mixture of normals, so people put a prior on the individual $\lambda$'s so that the penalty terms can vary. The problem with this larger model is that we would need to do an expectation step to fill in the extra $\lambda$ parameters of the model- but these are locked up in nasty places so doing the expectation is not possible in closed form. \\
+\\
+It's easier to find the posterior mode of $\pi(\beta,\gamma,\phi|Y)$ by doing EM on $\pi(\beta,\gamma,\phi|Y,\lambda)$ as the expectations are a lot easier.\\
+
+\section{New Stuff}
 Consider the statistical model
 \begin{align*}
 	Y|\beta,\phi &\sim N(1\beta_{0}+X\beta,\phi^{-1})\\
-	\beta_{i}|\phi, \gamma_{i},\lambda_{i}&\sim N\left( 0,\phi^{-1}\frac{\lambda_{i}}{\gamma_{i}}\right)\\
+	p(\beta_{i}|\phi, \gamma_{i},\lambda_{i})&=(1-\gamma_{i})\delta_{0}+\gamma_{i} N\left(\beta_{i}| 0,\phi^{-1}\lambda_{i}\right)\\
 	\lambda_{i}&\sim Ga\left( \frac{\alpha}{2},\frac{\alpha}{2} \right)\\
 	p(\gamma)&=\prod_{i=1}^{p}p^{\gamma_{i}}(1-p)^{1-\gamma_{i}}\\
 	p(\beta_{0},\phi)&\propto \frac{1}{\phi}.
@@ -72,8 +82,8 @@ For $\phi$ given $(\beta,\gamma)^{(t)}$\\
 \end{align*}
 For $(\beta,\gamma)$ given $\phi^{(t+1)}$ note if $\gamma_{i}=0$ then $\beta_{i}=0$. For the non-zero $\gamma$ lets construct submatrices and subvectors indexed by $\gamma$, then 
 \begin{align*}
-	Q(\beta,\gamma,\phi^{(t+1)}||\beta^{(t)},\gamma^{(t)},\phi^{(t)})\propto \frac{n+\sum \gamma_{i}-3}{2}\log \phi -\frac{\phi^{t+1}}{2}||Y-X_{\gamma}\beta_{\gamma}||^{2}-\frac{\phi^{(t+1)}}{2}\beta^{T}\Lambda_{\gamma}^{(t)}\beta + \sum \log p(\gamma_{i})\\
-	Q(\beta,\gamma,\phi^{(t+1)}||\beta^{(t)},\gamma^{(t)},\phi^{(t)})\propto \frac{n+\sum \gamma_{i}-3}{2}\log \phi -\frac{\phi^{t+1}}{2}||\beta_{\gamma}-(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})^{-1}X_{\gamma}^{T}Y||_{(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})}\\-\frac{\phi^{(t+1)}}{2}Y^{T}(I-X_{\gamma}(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})^{-1}X_{\gamma}^{T})Y + \sum \log p(\gamma_{i}),
+	Q(\beta,\gamma,\phi^{(t+1)}||\beta^{(t)},\gamma^{(t)},\phi^{(t)})\propto \frac{n+\sum \gamma_{i}-3}{2}\log \phi^{(t+1)} -\frac{\phi^{t+1}}{2}||Y-X_{\gamma}\beta_{\gamma}||^{2}-\frac{\phi^{(t+1)}}{2}\beta^{T}\Lambda_{\gamma}^{(t)}\beta + \sum \log p(\gamma_{i})\\
+	Q(\beta,\gamma,\phi^{(t+1)}||\beta^{(t)},\gamma^{(t)},\phi^{(t)})\propto \frac{n+\sum \gamma_{i}-3}{2}\log \phi^{(t+1)} -\frac{\phi^{t+1}}{2}||\beta_{\gamma}-(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})^{-1}X_{\gamma}^{T}Y||_{(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})}\\-\frac{\phi^{(t+1)}}{2}Y^{T}(I-X_{\gamma}(X_{\gamma}^{T}X_{\gamma}+\Lambda_{\gamma})^{-1}X_{\gamma}^{T})Y + \sum \log p(\gamma_{i}),
 \end{align*}
 which is achieves a maximum for a given $\gamma$ of
 \begin{align*}
